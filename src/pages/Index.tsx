@@ -10,26 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, FileSpreadsheet, Users, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-interface StudentData {
-  name?: string;
-  course?: string;
-  finalStatus?: string;
-  week?: number;
-  session1?: string;
-  session2?: string;
-  engagement?: string;
-  action?: string;
-  followUp?: string;
-  assessmentCheckpoint?: string;
-}
+import { StudentData, ParsedData } from '@/types/student';
 
 const Index = () => {
-  const [data, setData] = useState<{
-    students: StudentData[];
-    subjects: string[];
-    weeks: number[];
-  } | null>(null);
+  const [data, setData] = useState<ParsedData | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedWeek, setSelectedWeek] = useState<string>('all');
   
@@ -42,8 +26,16 @@ const Index = () => {
       setData(parsedData);
       toast({
         title: "File uploaded successfully",
-        description: `Parsed ${parsedData.students.length} student records`,
+        description: `Parsed ${parsedData.students.length} student records from ${parsedData.processedSheets.length} sheet(s)`,
       });
+      
+      if (parsedData.skippedSheets.length > 0) {
+        toast({
+          title: "Some sheets were skipped",
+          description: `Skipped: ${parsedData.skippedSheets.join(', ')}`,
+          variant: "default",
+        });
+      }
     } else if (error) {
       toast({
         title: "Upload failed",
@@ -59,7 +51,9 @@ const Index = () => {
   }) : [];
 
   const atRiskStudents = filteredStudents.filter(student => 
-    student.finalStatus?.toLowerCase().includes('at risk')
+    student.finalStatus?.toLowerCase().includes('at risk') ||
+    student.finalStatus?.toLowerCase().includes('atrisk') ||
+    (student.attendanceRate !== undefined && student.attendanceRate < 80)
   );
 
   const subjectBreakdownData = data ? data.subjects.map(subject => {
@@ -127,6 +121,41 @@ const Index = () => {
           </div>
         ) : (
           <>
+            {/* File Processing Summary */}
+            {(data.processedSheets.length > 0 || data.skippedSheets.length > 0) && (
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle>File Processing Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-success mb-2">Processed Sheets ({data.processedSheets.length})</h4>
+                      <div className="space-y-1">
+                        {data.processedSheets.map(sheet => (
+                          <Badge key={sheet} variant="success" className="mr-2">
+                            {sheet}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    {data.skippedSheets.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-warning mb-2">Skipped Sheets ({data.skippedSheets.length})</h4>
+                        <div className="space-y-1">
+                          {data.skippedSheets.map(sheet => (
+                            <Badge key={sheet} variant="secondary" className="mr-2">
+                              {sheet}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Summary Stats */}
             <SummaryStats
               totalStudents={filteredStudents.length}

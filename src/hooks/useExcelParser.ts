@@ -1,30 +1,166 @@
 
 import { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
+import { StudentData, ParsedData } from '@/types/student';
 
-interface StudentData {
-  name?: string;
-  course?: string;
-  finalStatus?: string;
-  week?: number;
-  session1?: string;
-  session2?: string;
-  engagement?: string;
-  action?: string;
-  followUp?: string;
-  assessmentCheckpoint?: string;
-  [key: string]: any;
-}
-
-interface ParsedData {
-  students: StudentData[];
-  subjects: string[];
-  weeks: number[];
-}
+const REQUIRED_COLUMNS = [
+  'Programme', 'Course', 'Student ID', 'First Name', 'Last Name', 
+  'Campus', 'Student Email', 'Personal Email', 'Phone Number', 
+  'Locality', 'Mode', 'Final Status', 'Observation/Feedback', 
+  'Session 1', 'Session 2', 'Engagement', 'Action', 'Follow Up'
+];
 
 export const useExcelParser = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const findColumnIndex = (headers: any[], searchTerms: string[]): number => {
+    if (!headers) return -1;
+    return headers.findIndex(header => {
+      if (typeof header !== 'string') return false;
+      return searchTerms.some(term => 
+        header.toLowerCase().trim() === term.toLowerCase().trim()
+      );
+    });
+  };
+
+  const validateHeaders = (headers: any[]): boolean => {
+    if (!headers) return false;
+    
+    const foundColumns = REQUIRED_COLUMNS.filter(requiredCol => 
+      headers.some(header => 
+        typeof header === 'string' && 
+        header.toLowerCase().trim() === requiredCol.toLowerCase().trim()
+      )
+    );
+    
+    console.log('Required columns:', REQUIRED_COLUMNS.length);
+    console.log('Found columns:', foundColumns.length);
+    console.log('Missing columns:', REQUIRED_COLUMNS.filter(col => 
+      !foundColumns.some(found => found.toLowerCase() === col.toLowerCase())
+    ));
+    
+    return foundColumns.length >= 10; // At least 10 core columns must be present
+  };
+
+  const calculateAttendance = (session1?: string, session2?: string) => {
+    const sessions = [session1, session2];
+    const attendedSessions = sessions.filter(session => 
+      session && 
+      session.toString().toLowerCase().trim() !== '' &&
+      session.toString().toLowerCase().trim() !== 'absent' &&
+      session.toString().toLowerCase().trim() !== 'a'
+    ).length;
+    
+    const totalSessions = 2;
+    const attendanceRate = totalSessions > 0 ? (attendedSessions / totalSessions) * 100 : 0;
+    
+    return {
+      attendedSessions,
+      totalSessions,
+      attendanceRate
+    };
+  };
+
+  const processSheet = (worksheet: XLSX.WorkSheet, sheetName: string): StudentData[] => {
+    console.log(`Processing sheet: ${sheetName}`);
+    
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+    
+    if (jsonData.length < 2) {
+      console.log(`Sheet ${sheetName} has insufficient rows`);
+      return [];
+    }
+
+    // Check row 2 (index 1) for headers as specified
+    const headers = jsonData[1] as string[];
+    console.log(`Headers in sheet ${sheetName}:`, headers);
+    
+    if (!validateHeaders(headers)) {
+      console.log(`Sheet ${sheetName} doesn't have required headers`);
+      return [];
+    }
+
+    // Data starts from row 3 (index 2)
+    const rows = jsonData.slice(2).filter(row => row && row.length > 0);
+    console.log(`Processing ${rows.length} data rows in sheet ${sheetName}`);
+
+    // Get column indices
+    const programmeIndex = findColumnIndex(headers, ['Programme']);
+    const courseIndex = findColumnIndex(headers, ['Course', 'Course ']);
+    const studentIdIndex = findColumnIndex(headers, ['Student ID']);
+    const firstNameIndex = findColumnIndex(headers, ['First Name']);
+    const lastNameIndex = findColumnIndex(headers, ['Last Name']);
+    const campusIndex = findColumnIndex(headers, ['Campus']);
+    const studentEmailIndex = findColumnIndex(headers, ['Student Email']);
+    const personalEmailIndex = findColumnIndex(headers, ['Personal Email']);
+    const phoneNumberIndex = findColumnIndex(headers, ['Phone Number']);
+    const localityIndex = findColumnIndex(headers, ['Locality']);
+    const modeIndex = findColumnIndex(headers, ['Mode']);
+    const finalStatusIndex = findColumnIndex(headers, ['Final Status']);
+    const observationFeedbackIndex = findColumnIndex(headers, ['Observation/Feedback']);
+    const session1Index = findColumnIndex(headers, ['Session 1']);
+    const session2Index = findColumnIndex(headers, ['Session 2']);
+    const engagementIndex = findColumnIndex(headers, ['Engagement']);
+    const actionIndex = findColumnIndex(headers, ['Action']);
+    const followUpIndex = findColumnIndex(headers, ['Follow Up']);
+
+    console.log('Column mapping:', {
+      programme: programmeIndex,
+      course: courseIndex,
+      studentId: studentIdIndex,
+      firstName: firstNameIndex,
+      lastName: lastNameIndex,
+      campus: campusIndex,
+      finalStatus: finalStatusIndex,
+      session1: session1Index,
+      session2: session2Index
+    });
+
+    const students: StudentData[] = rows.map((row, index) => {
+      try {
+        const firstName = firstNameIndex >= 0 && row[firstNameIndex] ? String(row[firstNameIndex]).trim() : '';
+        const lastName = lastNameIndex >= 0 && row[lastNameIndex] ? String(row[lastNameIndex]).trim() : '';
+        const name = `${firstName} ${lastName}`.trim();
+        
+        const session1 = session1Index >= 0 && row[session1Index] ? String(row[session1Index]).trim() : undefined;
+        const session2 = session2Index >= 0 && row[session2Index] ? String(row[session2Index]).trim() : undefined;
+        
+        const attendance = calculateAttendance(session1, session2);
+
+        return {
+          name: name || undefined,
+          programme: programmeIndex >= 0 && row[programmeIndex] ? String(row[programmeIndex]).trim() : undefined,
+          course: courseIndex >= 0 && row[courseIndex] ? String(row[courseIndex]).trim() : undefined,
+          studentId: studentIdIndex >= 0 && row[studentIdIndex] ? String(row[studentIdIndex]).trim() : undefined,
+          firstName,
+          lastName,
+          campus: campusIndex >= 0 && row[campusIndex] ? String(row[campusIndex]).trim() : undefined,
+          studentEmail: studentEmailIndex >= 0 && row[studentEmailIndex] ? String(row[studentEmailIndex]).trim() : undefined,
+          personalEmail: personalEmailIndex >= 0 && row[personalEmailIndex] ? String(row[personalEmailIndex]).trim() : undefined,
+          phoneNumber: phoneNumberIndex >= 0 && row[phoneNumberIndex] ? String(row[phoneNumberIndex]).trim() : undefined,
+          locality: localityIndex >= 0 && row[localityIndex] ? String(row[localityIndex]).trim() : undefined,
+          mode: modeIndex >= 0 && row[modeIndex] ? String(row[modeIndex]).trim() : undefined,
+          finalStatus: finalStatusIndex >= 0 && row[finalStatusIndex] ? String(row[finalStatusIndex]).trim() : undefined,
+          observationFeedback: observationFeedbackIndex >= 0 && row[observationFeedbackIndex] ? String(row[observationFeedbackIndex]).trim() : undefined,
+          session1,
+          session2,
+          engagement: engagementIndex >= 0 && row[engagementIndex] ? String(row[engagementIndex]).trim() : undefined,
+          action: actionIndex >= 0 && row[actionIndex] ? String(row[actionIndex]).trim() : undefined,
+          followUp: followUpIndex >= 0 && row[followUpIndex] ? String(row[followUpIndex]).trim() : undefined,
+          attendanceRate: attendance.attendanceRate,
+          totalSessions: attendance.totalSessions,
+          attendedSessions: attendance.attendedSessions
+        };
+      } catch (err) {
+        console.warn(`Error parsing row ${index} in sheet ${sheetName}:`, err);
+        return {} as StudentData;
+      }
+    }).filter(student => student.name || student.course || student.finalStatus);
+
+    console.log(`Successfully processed ${students.length} students from sheet ${sheetName}`);
+    return students;
+  };
 
   const parseExcelFile = useCallback(async (file: File): Promise<ParsedData | null> => {
     setIsLoading(true);
@@ -41,102 +177,55 @@ export const useExcelParser = () => {
       if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
         throw new Error('No sheets found in the Excel file');
       }
-      
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      
-      if (!worksheet) {
-        throw new Error('Could not read the worksheet');
-      }
-      
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-      
-      console.log('Raw data rows:', jsonData.length);
-      console.log('First few rows:', jsonData.slice(0, 3));
 
-      if (jsonData.length < 1) {
-        throw new Error('File appears to be empty');
-      }
+      let allStudents: StudentData[] = [];
+      const processedSheets: string[] = [];
+      const skippedSheets: string[] = [];
 
-      const headers = jsonData[0] as string[];
-      console.log('Headers found:', headers);
-      
-      if (!headers || headers.length === 0) {
-        throw new Error('No headers found in the file');
-      }
-
-      const rows = jsonData.slice(1).filter(row => row && row.length > 0);
-      console.log('Data rows after filtering:', rows.length);
-
-      // Safely find column indices with better error handling
-      const getColumnIndex = (searchTerms: string[]) => {
-        if (!headers) return -1;
-        return headers.findIndex(header => {
-          if (typeof header !== 'string') return false;
-          return searchTerms.some(term => 
-            header.toLowerCase().includes(term.toLowerCase())
-          );
-        });
-      };
-
-      const nameIndex = getColumnIndex(['name', 'student']);
-      const courseIndex = getColumnIndex(['course', 'subject']);
-      const statusIndex = getColumnIndex(['final status', 'status']);
-      const session1Index = getColumnIndex(['session 1', 'session1']);
-      const session2Index = getColumnIndex(['session 2', 'session2']);
-      const engagementIndex = getColumnIndex(['engagement']);
-      const actionIndex = getColumnIndex(['action']);
-      const followUpIndex = getColumnIndex(['follow up', 'followup']);
-      const assessmentIndex = getColumnIndex(['assessment checkpoint', 'assessment']);
-
-      console.log('Column indices found:', {
-        name: nameIndex,
-        course: courseIndex,
-        status: statusIndex,
-        session1: session1Index,
-        session2: session2Index,
-        engagement: engagementIndex,
-        action: actionIndex,
-        followUp: followUpIndex,
-        assessment: assessmentIndex
-      });
-
-      const students: StudentData[] = rows.map((row, index) => {
-        try {
-          return {
-            name: nameIndex >= 0 && row[nameIndex] ? String(row[nameIndex]).trim() : undefined,
-            course: courseIndex >= 0 && row[courseIndex] ? String(row[courseIndex]).trim() : undefined,
-            finalStatus: statusIndex >= 0 && row[statusIndex] ? String(row[statusIndex]).trim() : undefined,
-            session1: session1Index >= 0 && row[session1Index] ? String(row[session1Index]).trim() : undefined,
-            session2: session2Index >= 0 && row[session2Index] ? String(row[session2Index]).trim() : undefined,
-            engagement: engagementIndex >= 0 && row[engagementIndex] ? String(row[engagementIndex]).trim() : undefined,
-            action: actionIndex >= 0 && row[actionIndex] ? String(row[actionIndex]).trim() : undefined,
-            followUp: followUpIndex >= 0 && row[followUpIndex] ? String(row[followUpIndex]).trim() : undefined,
-            assessmentCheckpoint: assessmentIndex >= 0 && row[assessmentIndex] ? String(row[assessmentIndex]).trim() : undefined,
-          };
-        } catch (err) {
-          console.warn(`Error parsing row ${index}:`, err);
-          return {};
+      // Process all sheets
+      for (const sheetName of workbook.SheetNames) {
+        const worksheet = workbook.Sheets[sheetName];
+        
+        if (!worksheet) {
+          console.warn(`Could not read worksheet: ${sheetName}`);
+          skippedSheets.push(sheetName);
+          continue;
         }
-      }).filter(student => student.name || student.course || student.finalStatus);
 
-      console.log('Parsed students:', students.length);
-      console.log('Sample student:', students[0]);
+        const sheetStudents = processSheet(worksheet, sheetName);
+        
+        if (sheetStudents.length > 0) {
+          allStudents = [...allStudents, ...sheetStudents];
+          processedSheets.push(sheetName);
+          console.log(`Added ${sheetStudents.length} students from sheet ${sheetName}`);
+        } else {
+          skippedSheets.push(sheetName);
+          console.log(`Skipped sheet ${sheetName} - no valid data found`);
+        }
+      }
+
+      console.log(`Total students processed: ${allStudents.length}`);
+      console.log(`Processed sheets: ${processedSheets.join(', ')}`);
+      console.log(`Skipped sheets: ${skippedSheets.join(', ')}`);
+
+      if (allStudents.length === 0) {
+        throw new Error('No valid student data found in any sheet. Please check that your Excel file has the required columns in row 2.');
+      }
 
       const subjects = [...new Set(
-        students
+        allStudents
           .map(s => s.course)
           .filter(course => course && course.trim() !== '')
       )] as string[];
 
-      console.log('Subjects found:', subjects);
-
       const weeks = [1, 2, 3, 4, 5, 6, 7, 8]; // Default weeks
 
-      const result = {
-        students,
+      const result: ParsedData = {
+        students: allStudents,
         subjects,
-        weeks
+        weeks,
+        processedSheets,
+        skippedSheets
       };
 
       console.log('Final parsed result:', result);

@@ -42,26 +42,59 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   return (
     <div className={cn('w-full', className)}>
       {!uploadedFile ? (
-        <div
-          {...getRootProps()}
-          className={cn(
-            'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
-            isDragActive
-              ? 'border-accent bg-accent/5'
-              : 'border-border hover:border-accent hover:bg-accent/5',
-            'focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2'
-          )}
-        >
-          <input {...getInputProps()} />
-          <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <div className="space-y-2">
-            <p className="text-lg font-medium">
-              {isDragActive
-                ? 'Drop your file here'
-                : 'Drag & drop your Excel file here'}
+        <div>
+          <div
+            {...getRootProps()}
+            className={cn(
+              'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
+              isDragActive
+                ? 'border-accent bg-accent/5'
+                : 'border-border hover:border-accent hover:bg-accent/5',
+              'focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2'
+            )}
+          >
+            <input {...getInputProps()} />
+            <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <div className="space-y-2">
+              <p className="text-lg font-medium">
+                {isDragActive
+                  ? 'Drop your file here'
+                  : 'Drag & drop your Excel file here'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                or click to browse (xlsx, xls, csv)
+              </p>
+            </div>
+          </div>
+          
+          {/* Format Guide */}
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+            <h4 className="font-medium text-sm mb-2">Expected Format:</h4>
+            <p className="text-xs text-muted-foreground mb-2">
+              Your Excel file should have column headers in <strong>row 2</strong> with these required columns:
             </p>
-            <p className="text-sm text-muted-foreground">
-              or click to browse (xlsx, xls, csv)
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-1 text-xs text-muted-foreground">
+              <span>• Programme</span>
+              <span>• Course</span>
+              <span>• Student ID</span>
+              <span>• First Name</span>
+              <span>• Last Name</span>
+              <span>• Campus</span>
+              <span>• Student Email</span>
+              <span>• Personal Email</span>
+              <span>• Phone Number</span>
+              <span>• Locality</span>
+              <span>• Mode</span>
+              <span>• Final Status</span>
+              <span>• Observation/Feedback</span>
+              <span>• Session 1</span>
+              <span>• Session 2</span>
+              <span>• Engagement</span>
+              <span>• Action</span>
+              <span>• Follow Up</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              <strong>Note:</strong> All sheets in your Excel file will be processed automatically.
             </p>
           </div>
         </div>
