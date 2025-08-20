@@ -1,14 +1,15 @@
-
 import React, { useState } from 'react';
 import { FileUpload } from '@/components/ui/file-upload';
 import { StudentCard } from '@/components/analytics/StudentCard';
 import { SummaryStats } from '@/components/analytics/SummaryStats';
 import { useExcelParser } from '@/hooks/useExcelParser';
+import { useExcelExport } from '@/hooks/useExcelExport';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart3, FileSpreadsheet, Users, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { BarChart3, FileSpreadsheet, Users, AlertTriangle, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { StudentData, ParsedData } from '@/types/student';
 
@@ -18,6 +19,7 @@ const Index = () => {
   const [selectedWeek, setSelectedWeek] = useState<string>('all');
   
   const { parseExcelFile, isLoading, error } = useExcelParser();
+  const { exportAtRiskStudents } = useExcelExport();
   const { toast } = useToast();
 
   const handleFileSelect = async (file: File) => {
@@ -56,6 +58,25 @@ const Index = () => {
     student.finalStatus?.toLowerCase().includes('atrisk')
   );
 
+  const handleExportAtRisk = () => {
+    if (atRiskStudents.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no at-risk students to export",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const filename = `at-risk-students-${new Date().toISOString().split('T')[0]}.xlsx`;
+    exportAtRiskStudents(atRiskStudents, filename);
+    
+    toast({
+      title: "Export successful",
+      description: `Exported ${atRiskStudents.length} at-risk students to ${filename}`,
+    });
+  };
+
   const assessmentWeeks = [3, 5, 8];
   const showAssessment = assessmentWeeks.includes(parseInt(selectedWeek));
 
@@ -64,14 +85,24 @@ const Index = () => {
       {/* Header */}
       <div className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center space-x-3">
-            <BarChart3 className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-3xl font-bold">Student Analytics</h1>
-              <p className="text-muted-foreground">
-                Upload and analyze student data to identify at-risk students
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <BarChart3 className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-3xl font-bold">Student Analytics</h1>
+                <p className="text-muted-foreground">
+                  Upload and analyze student data to identify at-risk students
+                </p>
+              </div>
             </div>
+            
+            {/* Export Button - only show when there are at-risk students */}
+            {data && atRiskStudents.length > 0 && (
+              <Button onClick={handleExportAtRisk} className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Export At-Risk Students
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -138,7 +169,7 @@ const Index = () => {
               </Card>
             )}
 
-            {/* Summary Stats - removed attendance rate */}
+            {/* Summary Stats */}
             <SummaryStats
               totalStudents={filteredStudents.length}
               atRiskStudents={atRiskStudents.length}
