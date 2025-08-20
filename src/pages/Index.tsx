@@ -50,16 +50,17 @@ const Index = () => {
     return subjectMatch;
   }) : [];
 
+  // Only check Final Status column for at-risk determination
   const atRiskStudents = filteredStudents.filter(student => 
     student.finalStatus?.toLowerCase().includes('at risk') ||
-    student.finalStatus?.toLowerCase().includes('atrisk') ||
-    (student.attendanceRate !== undefined && student.attendanceRate < 80)
+    student.finalStatus?.toLowerCase().includes('atrisk')
   );
 
   const subjectBreakdownData = data ? data.subjects.map(subject => {
     const subjectStudents = data.students.filter(s => s.course === subject);
     const atRiskCount = subjectStudents.filter(s => 
-      s.finalStatus?.toLowerCase().includes('at risk')
+      s.finalStatus?.toLowerCase().includes('at risk') ||
+      s.finalStatus?.toLowerCase().includes('atrisk')
     ).length;
     
     return {
@@ -252,7 +253,10 @@ const Index = () => {
                 <TabsContent value="good" className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredStudents
-                      .filter(student => !student.finalStatus?.toLowerCase().includes('at risk'))
+                      .filter(student => !(
+                        student.finalStatus?.toLowerCase().includes('at risk') ||
+                        student.finalStatus?.toLowerCase().includes('atrisk')
+                      ))
                       .map((student, index) => (
                         <StudentCard 
                           key={index} 

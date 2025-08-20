@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,9 +14,9 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   student, 
   showAssessment = false 
 }) => {
+  // Only check Final Status column for at-risk determination
   const isAtRisk = student.finalStatus?.toLowerCase().includes('at risk') ||
-                   student.finalStatus?.toLowerCase().includes('atrisk') ||
-                   (student.attendanceRate !== undefined && student.attendanceRate < 80);
+                   student.finalStatus?.toLowerCase().includes('atrisk');
   
   const getStatusIcon = () => {
     if (isAtRisk) return <AlertTriangle className="h-4 w-4" />;
@@ -115,8 +116,8 @@ export const StudentCard: React.FC<StudentCardProps> = ({
           </div>
         )}
 
-        {/* Observation/Feedback */}
-        {student.observationFeedback && (
+        {/* Observation/Feedback - only show if not empty */}
+        {student.observationFeedback && student.observationFeedback.trim() !== '' && (
           <div className="pt-2 border-t">
             <span className="font-medium text-muted-foreground text-sm">Observation:</span>
             <p className="mt-1 text-sm">{student.observationFeedback}</p>
