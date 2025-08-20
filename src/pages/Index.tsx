@@ -1,8 +1,8 @@
+
 import React, { useState } from 'react';
 import { FileUpload } from '@/components/ui/file-upload';
 import { StudentCard } from '@/components/analytics/StudentCard';
 import { SummaryStats } from '@/components/analytics/SummaryStats';
-import { SubjectBreakdown } from '@/components/analytics/SubjectBreakdown';
 import { useExcelParser } from '@/hooks/useExcelParser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,25 +56,6 @@ const Index = () => {
     student.finalStatus?.toLowerCase().includes('atrisk')
   );
 
-  const subjectBreakdownData = data ? data.subjects.map(subject => {
-    const subjectStudents = data.students.filter(s => s.course === subject);
-    const atRiskCount = subjectStudents.filter(s => 
-      s.finalStatus?.toLowerCase().includes('at risk') ||
-      s.finalStatus?.toLowerCase().includes('atrisk')
-    ).length;
-    
-    return {
-      subject,
-      total: subjectStudents.length,
-      atRisk: atRiskCount,
-      percentage: (subjectStudents.length / data.students.length) * 100
-    };
-  }) : [];
-
-  const attendanceRate = filteredStudents.length > 0 
-    ? ((filteredStudents.length - atRiskStudents.length) / filteredStudents.length) * 100
-    : 0;
-
   const assessmentWeeks = [3, 5, 8];
   const showAssessment = assessmentWeeks.includes(parseInt(selectedWeek));
 
@@ -86,9 +67,9 @@ const Index = () => {
           <div className="flex items-center space-x-3">
             <BarChart3 className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold">Student Attendance Analytics</h1>
+              <h1 className="text-3xl font-bold">Student Analytics</h1>
               <p className="text-muted-foreground">
-                Upload and analyze student attendance data to identify at-risk students
+                Upload and analyze student data to identify at-risk students
               </p>
             </div>
           </div>
@@ -103,7 +84,7 @@ const Index = () => {
                 <FileSpreadsheet className="mx-auto h-12 w-12 text-primary mb-4" />
                 <CardTitle className="text-2xl">Upload Student Data</CardTitle>
                 <p className="text-muted-foreground">
-                  Upload your Excel file containing student attendance data to get started
+                  Upload your Excel file containing student data to get started
                 </p>
               </CardHeader>
               <CardContent>
@@ -157,16 +138,12 @@ const Index = () => {
               </Card>
             )}
 
-            {/* Summary Stats */}
+            {/* Summary Stats - removed attendance rate */}
             <SummaryStats
               totalStudents={filteredStudents.length}
               atRiskStudents={atRiskStudents.length}
               subjects={data.subjects.length}
-              attendanceRate={attendanceRate}
             />
-
-            {/* Subject Breakdown Charts */}
-            <SubjectBreakdown data={subjectBreakdownData} />
 
             {/* Filters and Student List */}
             <div className="space-y-6">

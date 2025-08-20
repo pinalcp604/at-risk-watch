@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileSpreadsheet, X } from 'lucide-react';
@@ -74,7 +75,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               Your Excel file should have column headers in <strong>row 2</strong> with these required columns:
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-1 text-xs text-muted-foreground">
-              <span>• Programme</span>
               <span>• Course</span>
               <span>• Student ID</span>
               <span>• First Name</span>
@@ -86,9 +86,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               <span>• Locality</span>
               <span>• Mode</span>
               <span>• Final Status</span>
-              <span>• Observation/Feedback</span>
-              <span>• Session 1</span>
-              <span>• Session 2</span>
               <span>• Engagement</span>
               <span>• Action</span>
               <span>• Follow Up</span>

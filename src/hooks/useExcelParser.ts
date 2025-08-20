@@ -4,10 +4,10 @@ import * as XLSX from 'xlsx';
 import { StudentData, ParsedData } from '@/types/student';
 
 const REQUIRED_COLUMNS = [
-  'Programme', 'Course', 'Student ID', 'First Name', 'Last Name', 
+  'Course', 'Student ID', 'First Name', 'Last Name', 
   'Campus', 'Student Email', 'Personal Email', 'Phone Number', 
-  'Locality', 'Mode', 'Final Status', 'Observation/Feedback', 
-  'Session 1', 'Session 2', 'Engagement', 'Action', 'Follow Up'
+  'Locality', 'Mode', 'Final Status', 
+  'Engagement', 'Action', 'Follow Up'
 ];
 
 export const useExcelParser = () => {
@@ -40,26 +40,7 @@ export const useExcelParser = () => {
       !foundColumns.some(found => found.toLowerCase() === col.toLowerCase())
     ));
     
-    return foundColumns.length >= 10; // At least 10 core columns must be present
-  };
-
-  const calculateAttendance = (session1?: string, session2?: string) => {
-    const sessions = [session1, session2];
-    const attendedSessions = sessions.filter(session => 
-      session && 
-      session.toString().toLowerCase().trim() !== '' &&
-      session.toString().toLowerCase().trim() !== 'absent' &&
-      session.toString().toLowerCase().trim() !== 'a'
-    ).length;
-    
-    const totalSessions = 2;
-    const attendanceRate = totalSessions > 0 ? (attendedSessions / totalSessions) * 100 : 0;
-    
-    return {
-      attendedSessions,
-      totalSessions,
-      attendanceRate
-    };
+    return foundColumns.length >= 8; // At least 8 core columns must be present
   };
 
   const processSheet = (worksheet: XLSX.WorkSheet, sheetName: string): StudentData[] => {
@@ -85,8 +66,7 @@ export const useExcelParser = () => {
     const rows = jsonData.slice(2).filter(row => row && row.length > 0);
     console.log(`Processing ${rows.length} data rows in sheet ${sheetName}`);
 
-    // Get column indices
-    const programmeIndex = findColumnIndex(headers, ['Programme']);
+    // Get column indices (removed Programme, Session 1, Session 2, Observation/Feedback)
     const courseIndex = findColumnIndex(headers, ['Course', 'Course ']);
     const studentIdIndex = findColumnIndex(headers, ['Student ID']);
     const firstNameIndex = findColumnIndex(headers, ['First Name']);
@@ -98,23 +78,17 @@ export const useExcelParser = () => {
     const localityIndex = findColumnIndex(headers, ['Locality']);
     const modeIndex = findColumnIndex(headers, ['Mode']);
     const finalStatusIndex = findColumnIndex(headers, ['Final Status']);
-    const observationFeedbackIndex = findColumnIndex(headers, ['Observation/Feedback']);
-    const session1Index = findColumnIndex(headers, ['Session 1']);
-    const session2Index = findColumnIndex(headers, ['Session 2']);
     const engagementIndex = findColumnIndex(headers, ['Engagement']);
     const actionIndex = findColumnIndex(headers, ['Action']);
     const followUpIndex = findColumnIndex(headers, ['Follow Up']);
 
     console.log('Column mapping:', {
-      programme: programmeIndex,
       course: courseIndex,
       studentId: studentIdIndex,
       firstName: firstNameIndex,
       lastName: lastNameIndex,
       campus: campusIndex,
-      finalStatus: finalStatusIndex,
-      session1: session1Index,
-      session2: session2Index
+      finalStatus: finalStatusIndex
     });
 
     const students: StudentData[] = rows.map((row, index) => {
@@ -122,15 +96,9 @@ export const useExcelParser = () => {
         const firstName = firstNameIndex >= 0 && row[firstNameIndex] ? String(row[firstNameIndex]).trim() : '';
         const lastName = lastNameIndex >= 0 && row[lastNameIndex] ? String(row[lastNameIndex]).trim() : '';
         const name = `${firstName} ${lastName}`.trim();
-        
-        const session1 = session1Index >= 0 && row[session1Index] ? String(row[session1Index]).trim() : undefined;
-        const session2 = session2Index >= 0 && row[session2Index] ? String(row[session2Index]).trim() : undefined;
-        
-        const attendance = calculateAttendance(session1, session2);
 
         return {
           name: name || undefined,
-          programme: programmeIndex >= 0 && row[programmeIndex] ? String(row[programmeIndex]).trim() : undefined,
           course: courseIndex >= 0 && row[courseIndex] ? String(row[courseIndex]).trim() : undefined,
           studentId: studentIdIndex >= 0 && row[studentIdIndex] ? String(row[studentIdIndex]).trim() : undefined,
           firstName,
@@ -142,15 +110,9 @@ export const useExcelParser = () => {
           locality: localityIndex >= 0 && row[localityIndex] ? String(row[localityIndex]).trim() : undefined,
           mode: modeIndex >= 0 && row[modeIndex] ? String(row[modeIndex]).trim() : undefined,
           finalStatus: finalStatusIndex >= 0 && row[finalStatusIndex] ? String(row[finalStatusIndex]).trim() : undefined,
-          observationFeedback: observationFeedbackIndex >= 0 && row[observationFeedbackIndex] ? String(row[observationFeedbackIndex]).trim() : undefined,
-          session1,
-          session2,
           engagement: engagementIndex >= 0 && row[engagementIndex] ? String(row[engagementIndex]).trim() : undefined,
           action: actionIndex >= 0 && row[actionIndex] ? String(row[actionIndex]).trim() : undefined,
           followUp: followUpIndex >= 0 && row[followUpIndex] ? String(row[followUpIndex]).trim() : undefined,
-          attendanceRate: attendance.attendanceRate,
-          totalSessions: attendance.totalSessions,
-          attendedSessions: attendance.attendedSessions
         };
       } catch (err) {
         console.warn(`Error parsing row ${index} in sheet ${sheetName}:`, err);
