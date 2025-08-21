@@ -23,7 +23,20 @@ export interface StudentData {
   followUp?: string;
   assessmentCheckpoint?: string;
   
+  // Weekly Session Attendance
+  weeklyAttendance?: WeeklyAttendance[];
+  
   [key: string]: any;
+}
+
+export interface WeeklyAttendance {
+  week: number;
+  session1?: string;
+  session2?: string;
+  engagement?: string;
+  action?: string;
+  followUp?: string;
+  assessmentCheckpoint?: string;
 }
 
 export interface ParsedData {

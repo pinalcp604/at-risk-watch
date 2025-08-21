@@ -1,7 +1,6 @@
-
 import { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { StudentData, ParsedData } from '@/types/student';
+import { StudentData, ParsedData, WeeklyAttendance } from '@/types/student';
 
 const REQUIRED_COLUMNS = [
   'Course', 'Student ID', 'First Name', 'Last Name', 
@@ -43,6 +42,57 @@ export const useExcelParser = () => {
     return foundColumns.length >= 8; // At least 8 core columns must be present
   };
 
+  const parseWeeklyAttendance = (headers: string[], row: any[]): WeeklyAttendance[] => {
+    const weeklyData: WeeklyAttendance[] = [];
+    let currentWeek = 1;
+    
+    // Look for patterns of Session 1, Session 2, Engagement, Action, Follow Up
+    // and Assessment Checkpoints to determine week boundaries
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i];
+      if (!header) continue;
+      
+      if (header.toLowerCase().includes('session 1')) {
+        const session1 = row[i] ? String(row[i]).trim() : '';
+        const session2Index = i + 1;
+        const session2 = session2Index < row.length && row[session2Index] ? String(row[session2Index]).trim() : '';
+        
+        // Look for engagement, action, follow up in the next few columns
+        let engagement = '';
+        let action = '';
+        let followUp = '';
+        let assessmentCheckpoint = '';
+        
+        for (let j = i + 2; j < Math.min(i + 6, headers.length); j++) {
+          const nextHeader = headers[j];
+          if (nextHeader?.toLowerCase().includes('engagement')) {
+            engagement = row[j] ? String(row[j]).trim() : '';
+          } else if (nextHeader?.toLowerCase().includes('action')) {
+            action = row[j] ? String(row[j]).trim() : '';
+          } else if (nextHeader?.toLowerCase().includes('follow up')) {
+            followUp = row[j] ? String(row[j]).trim() : '';
+          } else if (nextHeader?.toLowerCase().includes('assessment checkpoint')) {
+            assessmentCheckpoint = row[j] ? String(row[j]).trim() : '';
+          }
+        }
+        
+        weeklyData.push({
+          week: currentWeek,
+          session1,
+          session2,
+          engagement,
+          action,
+          followUp,
+          assessmentCheckpoint
+        });
+        
+        currentWeek++;
+      }
+    }
+    
+    return weeklyData;
+  };
+
   const processSheet = (worksheet: XLSX.WorkSheet, sheetName: string): StudentData[] => {
     console.log(`Processing sheet: ${sheetName}`);
     
@@ -66,7 +116,7 @@ export const useExcelParser = () => {
     const rows = jsonData.slice(2).filter(row => row && row.length > 0);
     console.log(`Processing ${rows.length} data rows in sheet ${sheetName}`);
 
-    // Get column indices (removed Programme, Session 1, Session 2, Observation/Feedback)
+    // Get column indices
     const courseIndex = findColumnIndex(headers, ['Course', 'Course ']);
     const studentIdIndex = findColumnIndex(headers, ['Student ID']);
     const firstNameIndex = findColumnIndex(headers, ['First Name']);
@@ -97,6 +147,9 @@ export const useExcelParser = () => {
         const lastName = lastNameIndex >= 0 && row[lastNameIndex] ? String(row[lastNameIndex]).trim() : '';
         const name = `${firstName} ${lastName}`.trim();
 
+        // Parse weekly attendance data
+        const weeklyAttendance = parseWeeklyAttendance(headers, row);
+
         return {
           name: name || undefined,
           course: courseIndex >= 0 && row[courseIndex] ? String(row[courseIndex]).trim() : undefined,
@@ -113,6 +166,7 @@ export const useExcelParser = () => {
           engagement: engagementIndex >= 0 && row[engagementIndex] ? String(row[engagementIndex]).trim() : undefined,
           action: actionIndex >= 0 && row[actionIndex] ? String(row[actionIndex]).trim() : undefined,
           followUp: followUpIndex >= 0 && row[followUpIndex] ? String(row[followUpIndex]).trim() : undefined,
+          weeklyAttendance
         };
       } catch (err) {
         console.warn(`Error parsing row ${index} in sheet ${sheetName}:`, err);

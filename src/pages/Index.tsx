@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { FileUpload } from '@/components/ui/file-upload';
 import { StudentCard } from '@/components/analytics/StudentCard';
 import { SummaryStats } from '@/components/analytics/SummaryStats';
+import { WeeklyAttendance } from '@/components/analytics/WeeklyAttendance';
 import { useExcelParser } from '@/hooks/useExcelParser';
 import { useExcelExport } from '@/hooks/useExcelExport';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -175,6 +177,9 @@ const Index = () => {
               atRiskStudents={atRiskStudents.length}
               subjects={data.subjects.length}
             />
+
+            {/* Weekly Attendance Overview */}
+            <WeeklyAttendance students={data.students} selectedSubject={selectedSubject} />
 
             {/* Filters and Student List */}
             <div className="space-y-6">
